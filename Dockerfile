@@ -9,6 +9,10 @@ ENV TZ=Asia/Shanghai
 # 创建工作目录
 WORKDIR /workspace
 
+# 配置国内镜像源加速下载
+RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.aliyun.com@g' /etc/apt/sources.list.d/ubuntu.sources && \
+    sed -i 's@//.*security.ubuntu.com@//mirrors.aliyun.com@g' /etc/apt/sources.list.d/ubuntu.sources
+
 # 更新包管理器并安装基础工具
 RUN apt-get update && apt-get install -y \
     # 基础系统工具
@@ -31,50 +35,12 @@ RUN apt-get update && apt-get install -y \
     automake \
     autoconf \
     libtool \
-    # Python 和脚本支持
-    python3 \
-    python3-pip \
-    python3-dev \
-    # 调试和分析工具
-    gdb \
-    valgrind \
-    strace \
-    ltrace \
-    # 版本控制
-    subversion \
-    mercurial \
-    # 文档工具
-    doxygen \
-    graphviz \
-    # 网络工具
-    netcat-openbsd \
-    telnet \
     # 文本处理
     vim \
-    nano \
-    jq \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装 ARM64 交叉编译工具链
-RUN apt-get update && apt-get install -y \
-    # ARM64 交叉编译器
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
-    # ARM64 系统库
-    libc6-dev-arm64-cross \
-    linux-libc-dev-arm64-cross \
-    # ARM64 标准库
-    libstdc++6-arm64-cross \
-    # 常用库的 ARM64 版本
-    zlib1g-dev:arm64 \
-    libssl-dev:arm64 \
-    libcurl4-openssl-dev:arm64 \
-    libreadline-dev:arm64 \
-    libsqlite3-dev:arm64 \
-    libffi-dev:arm64 \
-    libbz2-dev:arm64 \
-    liblzma-dev:arm64 \
-    && rm -rf /var/lib/apt/lists/*
+# 配置多架构支持 (必须在安装交叉编译包之前)
+RUN dpkg --add-architecture arm64
 
 # 安装常用开发库 (AMD64 native)
 RUN apt-get update && apt-get install -y \
@@ -107,8 +73,27 @@ RUN apt-get update && apt-get install -y \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 配置多架构支持
-RUN dpkg --add-architecture arm64
+# 安装 ARM64 交叉编译工具链
+RUN apt-get update && apt-get install -y \
+    # ARM64 交叉编译器
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    # ARM64 系统库
+    libc6-dev-arm64-cross \
+    linux-libc-dev-arm64-cross \
+    # ARM64 标准库
+    libstdc++6-arm64-cross \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装 ARM64 版本的库 (分开安装以避免冲突)
+RUN apt-get update && apt-get install -y \
+    zlib1g-dev:arm64 \
+    libssl-dev:arm64 \
+    libsqlite3-dev:arm64 \
+    libffi-dev:arm64 \
+    libbz2-dev:arm64 \
+    liblzma-dev:arm64 \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置交叉编译环境变量
 ENV CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
