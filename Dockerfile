@@ -39,9 +39,6 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-# 配置多架构支持 (必须在安装交叉编译包之前)
-RUN dpkg --add-architecture arm64
-
 # 安装常用开发库 (AMD64 native)
 RUN apt-get update && apt-get install -y \
     # 加密和网络库
@@ -75,24 +72,32 @@ RUN apt-get update && apt-get install -y \
 
 # 安装 ARM64 交叉编译工具链
 RUN apt-get update && apt-get install -y \
-    # ARM64 交叉编译器
+    # ARM64 交叉编译器和工具
+    binutils-aarch64-linux-gnu \
+    cpp-13-aarch64-linux-gnu \
+    cpp-aarch64-linux-gnu \
+    gcc-13-aarch64-linux-gnu \
+    gcc-13-aarch64-linux-gnu-base \
+    gcc-13-cross-base \
+    gcc-14-cross-base \
     gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu \
     # ARM64 系统库
+    libc6-arm64-cross \
     libc6-dev-arm64-cross \
     linux-libc-dev-arm64-cross \
-    # ARM64 标准库
+    # ARM64 GCC 库
+    libgcc-13-dev-arm64-cross \
+    libgcc-s1-arm64-cross \
     libstdc++6-arm64-cross \
-    && rm -rf /var/lib/apt/lists/*
-
-# 安装 ARM64 版本的库 (分开安装以避免冲突)
-RUN apt-get update && apt-get install -y \
-    zlib1g-dev:arm64 \
-    libssl-dev:arm64 \
-    libsqlite3-dev:arm64 \
-    libffi-dev:arm64 \
-    libbz2-dev:arm64 \
-    liblzma-dev:arm64 \
+    # ARM64 运行时库
+    libasan8-arm64-cross \
+    libatomic1-arm64-cross \
+    libgomp1-arm64-cross \
+    libhwasan0-arm64-cross \
+    libitm1-arm64-cross \
+    liblsan0-arm64-cross \
+    libtsan2-arm64-cross \
+    libubsan1-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置交叉编译环境变量
