@@ -30,9 +30,17 @@ if [ $? -eq 0 ]; then
     
     echo ""
     echo "=== 测试镜像 ==="
+    echo "测试 GCC 版本:"
     docker run --rm "$FULL_IMAGE_NAME" gcc --version
     echo ""
+    echo "测试 ARM64 GCC 版本:"
     docker run --rm "$FULL_IMAGE_NAME" aarch64-linux-gnu-gcc --version
+    echo ""
+    echo "测试 CMake 版本:"
+    docker run --rm "$FULL_IMAGE_NAME" cmake --version
+    echo ""
+    echo "测试 Ninja 版本:"
+    docker run --rm "$FULL_IMAGE_NAME" ninja --version
     
     echo ""
     echo "🎉 构建完成！"

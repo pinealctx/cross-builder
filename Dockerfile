@@ -1,5 +1,5 @@
 # 跨平台 C/C++ 编译环境
-# 基于 Ubuntu 24.04，支持 AMD64 native 编译和 ARM64 交叉编译
+# 基于 Ubuntu 24.04 Server，支持 AMD64 native 编译和 ARM64 交叉编译
 FROM ubuntu:24.04
 
 # 设置环境变量
@@ -26,9 +26,8 @@ RUN apt-get update && apt-get install -y \
     xz-utils \
     ca-certificates \
     software-properties-common \
-    # 编译工具链
+    # 编译工具链 (不包含cmake，稍后单独安装最新版)
     build-essential \
-    cmake \
     ninja-build \
     pkg-config \
     autotools-dev \
@@ -39,11 +38,35 @@ RUN apt-get update && apt-get install -y \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
+# 安装最新版本的 CMake (支持 Aeron 3.30+ 要求)
+RUN echo "安装最新版 CMake..." && \
+    # 移除旧版本 cmake
+    apt-get update && apt-get remove -y cmake || true && \
+    # 下载并安装 CMake 3.30.9
+    CMAKE_VERSION="3.30.9" && \
+    CMAKE_ARCH="x86_64" && \
+    CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH}.tar.gz" && \
+    cd /tmp && \
+    curl -fsSL "${CMAKE_URL}" -o cmake.tar.gz && \
+    tar -xzf cmake.tar.gz && \
+    mv cmake-${CMAKE_VERSION}-linux-${CMAKE_ARCH} /opt/cmake && \
+    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
+    ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest && \
+    ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack && \
+    ln -sf /opt/cmake/bin/ccmake /usr/local/bin/ccmake && \
+    rm -rf /tmp/cmake.tar.gz && \
+    # 验证 CMake 版本
+    cmake --version && \
+    rm -rf /var/lib/apt/lists/*
+
 # 安装常用开发库 (AMD64 native)
 RUN apt-get update && apt-get install -y \
     # 加密和网络库
     libssl-dev \
     libcurl4-openssl-dev \
+    # UUID 库 (Aeron 需要)
+    uuid-dev \
+    libuuid1 \
     # 压缩库
     zlib1g-dev \
     libbz2-dev \
@@ -81,6 +104,8 @@ RUN apt-get update && apt-get install -y \
     gcc-13-cross-base \
     gcc-14-cross-base \
     gcc-aarch64-linux-gnu \
+    g++-13-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
     # ARM64 系统库
     libc6-arm64-cross \
     libc6-dev-arm64-cross \
@@ -140,16 +165,19 @@ show_help() {\n\
     echo "  compile_x64 make"\n\
     echo "  compile_arm64 cmake .. && make"\n\
     echo ""\n\
-    echo "可用的交叉编译器:"\n\
-    echo "  gcc (AMD64): $(gcc --version | head -1)"\n\
-    echo "  gcc (ARM64): $(aarch64-linux-gnu-gcc --version | head -1)"\n\
+    echo "可用的工具版本:"\n\
+    echo "  CMake: $(cmake --version | head -1)"\n\
+    echo "  Ninja: $(ninja --version)"\n\
+    echo "  GCC (AMD64): $(gcc --version | head -1)"\n\
+    echo "  GCC (ARM64): $(aarch64-linux-gnu-gcc --version | head -1)"\n\
 }\n\
 ' > /usr/local/bin/build-helper && chmod +x /usr/local/bin/build-helper
 
 # 设置 bashrc
 RUN echo 'source /usr/local/bin/build-helper' >> /root/.bashrc && \
     echo 'alias help="show_help"' >> /root/.bashrc && \
-    echo 'echo "欢迎使用 xsyphon/cross-builder 编译环境!"' >> /root/.bashrc && \
+    echo 'echo "欢迎使用 xsyphon/cross-builder:2.0 编译环境!"' >> /root/.bashrc && \
+    echo 'echo "✅ 支持 CMake 3.30+，可编译 Aeron C MediaDriver"' >> /root/.bashrc && \
     echo 'echo "输入 help 查看使用帮助"' >> /root/.bashrc
 
 # 设置默认工作目录
